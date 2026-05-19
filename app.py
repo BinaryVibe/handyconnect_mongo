@@ -86,6 +86,44 @@ def make_entry(parent, show=None):
     entry.pack(fill=tk.X, pady=(2, 10), ipady=5)
     return entry
 
+def render_stars(rating):
+    """Converts a float/int rating into a string of visual stars (e.g., ★★★★☆)"""
+    try:
+        r = round(float(rating))
+    except (ValueError, TypeError):
+        r = 0
+    r = max(0, min(5, r)) # Clamp between 0 and 5
+    return "★" * r + "☆" * (5 - r)
+
+class StarRating(tk.Frame):
+    """An interactive clickable star rating widget for Tkinter."""
+    def __init__(self, parent, initial_rating=5, *args, **kwargs):
+        super().__init__(parent, bg="white", *args, **kwargs)
+        self.rating = initial_rating
+        self.stars = []
+        
+        for i in range(1, 6):
+            lbl = tk.Label(self, text="☆", font=("Arial", 24), bg="white", fg="#F5B041", cursor="hand2")
+            lbl.pack(side=tk.LEFT, padx=2)
+            # Bind left click to update the rating
+            lbl.bind("<Button-1>", lambda e, val=i: self.set_rating(val))
+            self.stars.append(lbl)
+            
+        self.update_stars()
+
+    def set_rating(self, val):
+        self.rating = val
+        self.update_stars()
+
+    def update_stars(self):
+        for i, lbl in enumerate(self.stars):
+            if i < self.rating:
+                lbl.config(text="★")
+            else:
+                lbl.config(text="☆")
+                
+    def get(self):
+        return self.rating
 
 # ============================================================
 # Main App
@@ -383,8 +421,12 @@ class HandyConnectApp(tk.Tk):
         rating = worker.get("avg_rating", 0)
         availability = "Available" if worker.get("availability", True) else "Unavailable"
 
+        # --- NEW CODE: Use visual stars for the average rating ---
+        star_display = render_stars(rating)
+        
         make_label(card, f"Skills: {skills}", bg="white").pack(anchor="w", pady=2)
-        make_label(card, f"Rating: {rating} | Status: {availability}", bg="white").pack(anchor="w")
+        make_label(card, f"Rating: {rating} {star_display} | Status: {availability}", bg="white", fg="#F5B041" if rating > 0 else "#222222").pack(anchor="w")
+        # ---------------------------------------------------------
 
         btns = tk.Frame(card, bg="white")
         btns.pack(anchor="e", pady=(8, 0))
@@ -703,17 +745,18 @@ class HandyConnectApp(tk.Tk):
         form = tk.Frame(content, bg="white", padx=20, pady=20)
         form.pack(fill=tk.X, pady=10)
 
-        make_label(form, "Rating 1-5", bg="white").pack(anchor="w")
-        rating_var = tk.StringVar(value="5")
-        rating_box = ttk.Combobox(form, textvariable=rating_var, values=["1", "2", "3", "4", "5"], state="readonly")
-        rating_box.pack(fill=tk.X, pady=(2, 10), ipady=4)
+        # --- NEW CODE: Interactive Star Selector ---
+        make_label(form, "Click to Rate", bg="white").pack(anchor="w")
+        star_selector = StarRating(form, initial_rating=5)
+        star_selector.pack(anchor="w", pady=(2, 10))
+        # -----------------------------------------
 
         make_label(form, "Comment", bg="white").pack(anchor="w")
         comment_text = tk.Text(form, height=5, font=("Arial", 11))
         comment_text.pack(fill=tk.X, pady=(2, 10))
 
         def submit_review():
-            rating = int(rating_var.get())
+            rating = star_selector.get()
             comment = comment_text.get("1.0", tk.END).strip()
 
             existing = reviews_col.find_one({
@@ -778,7 +821,13 @@ class HandyConnectApp(tk.Tk):
         card = tk.Frame(parent, bg="white", padx=14, pady=12, highlightbackground="#ddd", highlightthickness=1)
         card.pack(fill=tk.X, pady=6)
 
-        make_label(card, f"Rating: {review.get('rating', 0)}/5", size=14, bold=True, bg="white", fg="#4A2E1E").pack(anchor="w")
+        # --- NEW CODE: Render stars for the specific review ---
+        r_val = review.get('rating', 0)
+        star_display = render_stars(r_val)
+        
+        make_label(card, f"Rating: {star_display} ({r_val}/5)", size=14, bold=True, bg="white", fg="#F5B041").pack(anchor="w")
+        # ------------------------------------------------------
+        
         make_label(card, f"Service: {service.get('service_title') if service else 'Unknown'}", bg="white").pack(anchor="w")
         make_label(card, f"Customer: {full_name(customer) if customer else 'Unknown'}", bg="white").pack(anchor="w")
         make_label(card, f"Worker: {full_name(worker) if worker else 'Unknown'}", bg="white").pack(anchor="w")
