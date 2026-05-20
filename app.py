@@ -88,7 +88,7 @@ class StarRating(tk.Frame):
             if i < self.rating:
                 lbl.config(text="★")
             else:
-                lbl.config(text="☆")  # Fixed: Restored to clean empty star symbol
+                lbl.config(text="☆")
                 
     def get(self):
         return self.rating
@@ -207,7 +207,7 @@ class HandyConnectApp(tk.Tk):
         email_label = tk.Label(login_frame, text="Email:", fg='#4A2E1E', bg='#E9DFD8', font=('Arial', 12, 'bold'))
         email_label.place(x=10, y=240)
 
-        email_entry = tk.Text(login_frame, width=38, height=1, fg='black', border=0, bg='white', font=('Arial', 12))
+        email_entry = tk.Text(login_frame, width=38, height=1, fg='black', border=0, bg='#E9DFD8', font=('Arial', 12))
         email_entry.place(x=100, y=240)
         add_placeholder(email_entry, "Enter email")
         tk.Frame(login_frame, width=350, height=2, bg='#4A2E1E').place(x=100, y=260)
@@ -216,7 +216,7 @@ class HandyConnectApp(tk.Tk):
         password_label = tk.Label(login_frame, text="Password:", fg='#4A2E1E', bg='#E9DFD8', font=('Arial', 12, 'bold'))
         password_label.place(x=10, y=310)
 
-        password_entry = tk.Text(login_frame, width=38, height=1, fg='black', border=0, bg='white', font=('Arial', 12))
+        password_entry = tk.Text(login_frame, width=38, height=1, fg='black', border=0, bg='#E9DFD8', font=('Arial', 12))
         password_entry.place(x=100, y=310)
         add_placeholder(password_entry, "Enter password")
         tk.Frame(login_frame, width=350, height=2, bg='#4A2E1E').place(x=100, y=330)
@@ -254,7 +254,7 @@ class HandyConnectApp(tk.Tk):
         tk.Button(
             login_frame, width=12, height=2, border=0, bg='#4A2E1E', fg='white', cursor='hand2',
             text='Login', font=('Arial', 10, 'bold'), command=do_login
-        ).place(x=130, y=380)
+        ).place(x=230, y=380)
 
         tk.Label(login_frame, text="Don't have an account? ", fg='black', bg='#E9DFD8', font=('Arial', 10, 'bold')).place(x=120, y=455)
 
@@ -600,7 +600,8 @@ class HandyConnectApp(tk.Tk):
         content = self.render_shell("messages")
         make_label(content, "Messages", size=22, bold=True, fg="#4A2E1E").pack(anchor="w")
 
-        if self.current_user.get("role") == "customer":
+        is_customer = self.current_user.get("role") == "customer"
+        if is_customer:
             services = db.get_customer_services(self.current_user["_id"])
         else:
             services = db.get_worker_services(self.current_user["_id"])
@@ -613,7 +614,16 @@ class HandyConnectApp(tk.Tk):
             card = tk.Frame(content, bg="white", padx=14, pady=12, highlightbackground="#ddd", highlightthickness=1)
             card.pack(fill=tk.X, pady=6)
             make_label(card, f"{service.get('service_title')} | {service.get('status', 'pending')}", size=13, bold=True, bg="white", fg="#4A2E1E").pack(anchor="w")
-            make_label(card, f"Conversation ID: {short_id(service['_id'])}", bg="white").pack(anchor="w")
+            
+            # Dynamically resolve opposite peer name instead of showing the raw Conversation ID string
+            if is_customer:
+                peer_user = db.get_user_by_id(service.get("worker_id"))
+                peer_label_text = f"Worker: {full_name(peer_user) if peer_user else 'Unknown Worker'}"
+            else:
+                peer_user = db.get_user_by_id(service.get("customer_id"))
+                peer_label_text = f"Customer: {full_name(peer_user) if peer_user else 'Unknown Customer'}"
+                
+            make_label(card, peer_label_text, bg="white").pack(anchor="w")
             make_button(card, "Open Chat", lambda s=service: self.show_service_chat(s), bg="#C07B4D").pack(anchor="e", pady=(5, 0))
 
     def show_service_chat(self, service):
