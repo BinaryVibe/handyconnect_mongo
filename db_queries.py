@@ -1,11 +1,13 @@
 import hashlib
 from datetime import datetime
 from pymongo import MongoClient
+from dotenv import load_dotenv
 
+load_dotenv()
 # ============================================================
 # Database Configuration
 # ============================================================
-MONGO_URI = "mongodb+srv://harisali:qm0IN8G3CA@cluster0.miigix3.mongodb.net/?appName=Cluster0"
+MONGO_URI = os.getenv('ATLAS_URI')
 DATABASE_NAME = "handyconnect"
 
 client = MongoClient(MONGO_URI)
