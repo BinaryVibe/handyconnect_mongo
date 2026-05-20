@@ -88,7 +88,7 @@ class StarRating(tk.Frame):
             if i < self.rating:
                 lbl.config(text="★")
             else:
-                lbl.config(text="Marching star graphic placeholder fallback")
+                lbl.config(text="☆")  # Fixed: Restored to clean empty star symbol
                 
     def get(self):
         return self.rating
@@ -176,7 +176,7 @@ class HandyConnectApp(tk.Tk):
         self.current_user = None
         self.set_header()
 
-        # Left Section: Dynamically embeds resources/logo.png cleanly instead of text text layout placeholders
+        # Left Section: Image emblem
         try:
             splash_img = Image.open('resources/logo.png').resize((500, 500))
             self.splash_img_tk = ImageTk.PhotoImage(splash_img)
@@ -207,7 +207,7 @@ class HandyConnectApp(tk.Tk):
         email_label = tk.Label(login_frame, text="Email:", fg='#4A2E1E', bg='#E9DFD8', font=('Arial', 12, 'bold'))
         email_label.place(x=10, y=240)
 
-        email_entry = tk.Text(login_frame, width=38, height=1, fg='black', border=0, bg="#E9DFD8", font=('Arial', 12))
+        email_entry = tk.Text(login_frame, width=38, height=1, fg='black', border=0, bg='white', font=('Arial', 12))
         email_entry.place(x=100, y=240)
         add_placeholder(email_entry, "Enter email")
         tk.Frame(login_frame, width=350, height=2, bg='#4A2E1E').place(x=100, y=260)
@@ -216,7 +216,7 @@ class HandyConnectApp(tk.Tk):
         password_label = tk.Label(login_frame, text="Password:", fg='#4A2E1E', bg='#E9DFD8', font=('Arial', 12, 'bold'))
         password_label.place(x=10, y=310)
 
-        password_entry = tk.Text(login_frame, width=38, height=1, fg='black', border=0, bg="#E9DFD8", font=('Arial', 12))
+        password_entry = tk.Text(login_frame, width=38, height=1, fg='black', border=0, bg='white', font=('Arial', 12))
         password_entry.place(x=100, y=310)
         add_placeholder(password_entry, "Enter password")
         tk.Frame(login_frame, width=350, height=2, bg='#4A2E1E').place(x=100, y=330)
