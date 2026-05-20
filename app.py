@@ -1,13 +1,14 @@
 # app.py
 import tkinter as tk
 from tkinter import ttk, messagebox
+from PIL import Image, ImageTk
 from bson import ObjectId
 
-# Import all our external database queries
+# Import all external database queries
 import db_queries as db
 
 # ============================================================
-# Helpers
+# Helpers & UI Components
 # ============================================================
 
 def oid(value):
@@ -42,6 +43,22 @@ def make_entry(parent, show=None):
     entry.pack(fill=tk.X, pady=(2, 10), ipady=5)
     return entry
 
+def add_placeholder(widget, placeholder):
+    def on_focus_in(event):
+        if widget.get("1.0", "end-1c") == placeholder:
+            widget.delete("1.0", "end")
+            widget.config(fg='black')
+
+    def on_focus_out(event):
+        if widget.get("1.0", "end-1c").strip() == "":
+            widget.insert("1.0", placeholder)
+            widget.config(fg='grey')
+
+    widget.insert("1.0", placeholder)
+    widget.config(fg='grey')
+    widget.bind("<FocusIn>", on_focus_in)
+    widget.bind("<FocusOut>", on_focus_out)
+
 def render_stars(rating):
     try:
         r = round(float(rating))
@@ -71,7 +88,7 @@ class StarRating(tk.Frame):
             if i < self.rating:
                 lbl.config(text="★")
             else:
-                lbl.config(text="☆")
+                lbl.config(text="Marching star graphic placeholder fallback")
                 
     def get(self):
         return self.rating
@@ -84,20 +101,20 @@ class HandyConnectApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("HandyConnect")
-        self.geometry("1150x720")
-        self.minsize(1000, 650)
-        self.configure(bg="#F7F2EF")
+        self.geometry("1225x800")
+        self.configure(bg='#E9DFD8')  
+        self.resizable(False, False)
 
         self.current_user = None
 
+        # Header bar (hidden on login screen, visible inside dashboards)
         self.header = tk.Frame(self, bg="#4A2E1E", height=75)
-        self.header.pack(fill=tk.X)
         self.header_title = tk.Label(self.header, text="HandyConnect", bg="#4A2E1E", fg="white", font=("Arial", 24, "bold"))
         self.header_title.pack(side=tk.LEFT, padx=25, pady=18)
         self.header_user = tk.Label(self.header, text="", bg="#4A2E1E", fg="#E9DFD8", font=("Arial", 11))
         self.header_user.pack(side=tk.RIGHT, padx=25)
 
-        self.body = tk.Frame(self, bg="#F7F2EF")
+        self.body = tk.Frame(self, bg="#E9DFD8")  
         self.body.pack(fill=tk.BOTH, expand=True)
         self.show_login()
 
@@ -109,6 +126,8 @@ class HandyConnectApp(tk.Tk):
 
     def render_shell(self, active_page="home"):
         clear_frame(self.body)
+        self.body.config(bg="#F7F2EF")  
+        self.header.pack(fill=tk.X, before=self.body)
         self.set_header()
 
         sidebar = tk.Frame(self.body, bg="#E9DFD8", width=210)
@@ -147,38 +166,82 @@ class HandyConnectApp(tk.Tk):
         return content
 
     def logout(self):
+        self.header.pack_forget()
         self.current_user = None
         self.show_login()
 
     def show_login(self):
         clear_frame(self.body)
+        self.body.config(bg="#E9DFD8")  
         self.current_user = None
         self.set_header()
 
-        wrapper = tk.Frame(self.body, bg="#F7F2EF")
-        wrapper.pack(expand=True)
-        card = tk.Frame(wrapper, bg="white", padx=35, pady=30)
-        card.pack()
+        # Left Section: Dynamically embeds resources/logo.png cleanly instead of text text layout placeholders
+        try:
+            splash_img = Image.open('resources/logo.png').resize((500, 500))
+            self.splash_img_tk = ImageTk.PhotoImage(splash_img)
+            image_label = tk.Label(self.body, image=self.splash_img_tk, bg='#E9DFD8')
+            image_label.place(x=75, y=150)
+            image_label.image = self.splash_img_tk
+        except Exception:
+            fallback_label = tk.Label(self.body, text="[ HandyConnect Image Asset ]", bg="#E9DFD8", fg="#4A2E1E", font=('Arial', 14, 'bold'))
+            fallback_label.place(x=150, y=380)
 
-        make_label(card, "Login", size=24, bold=True, fg="#4A2E1E", bg="white").pack(anchor="center", pady=(0, 20))
-        make_label(card, "Email", bg="white").pack(anchor="w")
-        email_entry = make_entry(card)
-        make_label(card, "Password", bg="white").pack(anchor="w")
-        password_entry = make_entry(card, show="*")
+        # Right Section: Inputs card panel
+        login_frame = tk.Frame(self.body, width=580, height=850, background='#E9DFD8')
+        login_frame.place(x=650, y=70)
+
+        # Header Title Label
+        Title_1 = tk.Label(login_frame, text="Login", fg='#4A2E1E', bg='#E9DFD8', font=('Helvetica', 26, 'bold'))
+        Title_1.place(x=220, y=80)
+
+        # Role Combobox Selection
+        role_var = tk.StringVar(value="Select User Type")
+        role_dropdown = ttk.Combobox(
+            login_frame, textvariable=role_var, state="readonly",
+            values=["Customer", "Worker"], font=('Arial', 12), width=36
+        )
+        role_dropdown.place(x=100, y=180)
+
+        # Email Component Section
+        email_label = tk.Label(login_frame, text="Email:", fg='#4A2E1E', bg='#E9DFD8', font=('Arial', 12, 'bold'))
+        email_label.place(x=10, y=240)
+
+        email_entry = tk.Text(login_frame, width=38, height=1, fg='black', border=0, bg="#E9DFD8", font=('Arial', 12))
+        email_entry.place(x=100, y=240)
+        add_placeholder(email_entry, "Enter email")
+        tk.Frame(login_frame, width=350, height=2, bg='#4A2E1E').place(x=100, y=260)
+
+        # Password Component Section
+        password_label = tk.Label(login_frame, text="Password:", fg='#4A2E1E', bg='#E9DFD8', font=('Arial', 12, 'bold'))
+        password_label.place(x=10, y=310)
+
+        password_entry = tk.Text(login_frame, width=38, height=1, fg='black', border=0, bg="#E9DFD8", font=('Arial', 12))
+        password_entry.place(x=100, y=310)
+        add_placeholder(password_entry, "Enter password")
+        tk.Frame(login_frame, width=350, height=2, bg='#4A2E1E').place(x=100, y=330)
 
         def do_login():
-            email = email_entry.get().strip().lower()
-            password = password_entry.get().strip()
+            email = email_entry.get("1.0", "end-1c").strip().lower()
+            password = password_entry.get("1.0", "end-1c").strip()
+            selected_role = role_var.get().lower()
 
-            if not email or not password:
-                messagebox.showerror("Validation Error", "Please enter email and password.")
+            if selected_role == "select user type":
+                messagebox.showerror("Error", "User type not selected")
                 return
 
-            # --- Uses new query file ---
+            if not email or email == "enter email" or not password or password == "enter password":
+                messagebox.showerror("Error", "Email and password cannot be empty")
+                return
+
             user = db.authenticate_user(email, password)
 
             if not user:
-                messagebox.showerror("Login Failed", "Invalid email or password.")
+                messagebox.showerror("Login Failed", "Incorrect email or password.")
+                return
+
+            if user.get("role") != selected_role:
+                messagebox.showerror("Role Error", f"Account not registered as a {selected_role.capitalize()}.")
                 return
 
             self.current_user = user
@@ -187,8 +250,18 @@ class HandyConnectApp(tk.Tk):
             else:
                 self.show_customer_home()
 
-        make_button(card, "Login", do_login).pack(fill=tk.X, pady=(8, 8))
-        make_button(card, "Create Account", self.show_register, bg="#C07B4D").pack(fill=tk.X)
+        # Call to action bindings
+        tk.Button(
+            login_frame, width=12, height=2, border=0, bg='#4A2E1E', fg='white', cursor='hand2',
+            text='Login', font=('Arial', 10, 'bold'), command=do_login
+        ).place(x=130, y=380)
+
+        tk.Label(login_frame, text="Don't have an account? ", fg='black', bg='#E9DFD8', font=('Arial', 10, 'bold')).place(x=120, y=455)
+
+        tk.Button(
+            login_frame, width=7, height=2, border=0, bg='#E9DFD8', fg='#C07B4D', cursor='hand2',
+            text='Register', font=('Arial', 10, 'bold'), command=self.show_register
+        ).place(x=290, y=446)
 
     def show_register(self):
         clear_frame(self.body)
@@ -230,7 +303,6 @@ class HandyConnectApp(tk.Tk):
                 messagebox.showerror("Validation Error", "Please fill all required fields.")
                 return
 
-            # --- Uses new query file ---
             if db.get_user_by_email(email):
                 messagebox.showerror("Registration Error", "This email is already registered.")
                 return
@@ -260,7 +332,6 @@ class HandyConnectApp(tk.Tk):
                     "earnings": 0,
                 })
 
-            # --- Uses new query file ---
             result = db.insert_user(user)
             self.current_user = db.get_user_by_id(result.inserted_id)
 
@@ -287,8 +358,6 @@ class HandyConnectApp(tk.Tk):
         def load_workers():
             clear_frame(list_frame)
             term = search_var.get().strip().lower()
-            
-            # --- Uses new query file ---
             workers = db.get_all_workers()
 
             if term:
@@ -361,7 +430,6 @@ class HandyConnectApp(tk.Tk):
                 messagebox.showerror("Validation Error", "Price must be a number.")
                 return
 
-            # --- Uses new query file ---
             db.insert_service({
                 "worker_id": worker["_id"],
                 "customer_id": self.current_user["_id"],
@@ -391,8 +459,6 @@ class HandyConnectApp(tk.Tk):
     def show_customer_bookings(self):
         content = self.render_shell("my bookings")
         make_label(content, "My Bookings", size=22, bold=True, fg="#4A2E1E").pack(anchor="w")
-        
-        # --- Uses new query file ---
         services = db.get_customer_services(self.current_user["_id"])
 
         if not services:
@@ -405,8 +471,6 @@ class HandyConnectApp(tk.Tk):
     def show_customer_reviews(self):
         content = self.render_shell("reviews")
         make_label(content, "My Reviews", size=22, bold=True, fg="#4A2E1E").pack(anchor="w")
-        
-        # --- Uses new query file ---
         reviews = db.get_customer_reviews(self.current_user["_id"])
 
         if not reviews:
@@ -419,8 +483,6 @@ class HandyConnectApp(tk.Tk):
     def show_worker_home(self):
         content = self.render_shell("worker dashboard")
         make_label(content, "Worker Dashboard", size=22, bold=True, fg="#4A2E1E").pack(anchor="w")
-        
-        # --- Uses new query file ---
         services = db.get_worker_services(self.current_user["_id"])
 
         stats = tk.Frame(content, bg="#F7F2EF")
@@ -463,8 +525,6 @@ class HandyConnectApp(tk.Tk):
 
         def save():
             skills = [s.strip() for s in skills_entry.get().split(",") if s.strip()]
-            
-            # --- Uses new query file ---
             db.update_user_profile(self.current_user["_id"], {
                 "profession": profession_entry.get().strip(),
                 "skills": skills,
@@ -481,8 +541,6 @@ class HandyConnectApp(tk.Tk):
     def show_worker_reviews(self):
         content = self.render_shell("reviews")
         make_label(content, "Reviews Received", size=22, bold=True, fg="#4A2E1E").pack(anchor="w")
-        
-        # --- Uses new query file ---
         reviews = db.get_worker_reviews(self.current_user["_id"])
 
         if not reviews:
@@ -493,7 +551,6 @@ class HandyConnectApp(tk.Tk):
             self.review_card(content, review)
 
     def service_card(self, parent, service, viewer_role):
-        # --- Uses new query file ---
         worker = db.get_user_by_id(service.get("worker_id"))
         customer = db.get_user_by_id(service.get("customer_id"))
 
@@ -528,12 +585,10 @@ class HandyConnectApp(tk.Tk):
             if status == "accepted":
                 make_button(buttons, "Mark Completed", lambda s=service: self.update_service_status(s, "completed")).pack(side=tk.LEFT, padx=4)
             elif status == "completed":
-                # --- Uses new query file ---
                 if not db.get_review_by_service_and_customer(service["_id"], self.current_user["_id"]):
                     make_button(buttons, "Review", lambda s=service: self.show_review_form(s)).pack(side=tk.LEFT, padx=4)
 
     def update_service_status(self, service, status):
-        # --- Uses new query file ---
         db.update_service_state(service["_id"], status)
         messagebox.showinfo("Updated", f"Service marked as {status}.")
         if self.current_user.get("role") == "customer":
@@ -545,7 +600,6 @@ class HandyConnectApp(tk.Tk):
         content = self.render_shell("messages")
         make_label(content, "Messages", size=22, bold=True, fg="#4A2E1E").pack(anchor="w")
 
-        # --- Uses new query file ---
         if self.current_user.get("role") == "customer":
             services = db.get_customer_services(self.current_user["_id"])
         else:
@@ -573,7 +627,6 @@ class HandyConnectApp(tk.Tk):
 
         def load_messages():
             clear_frame(messages_frame)
-            # --- Uses new query file ---
             messages = db.get_service_messages(service["_id"])
 
             if not messages:
@@ -581,7 +634,6 @@ class HandyConnectApp(tk.Tk):
                 return
 
             for msg in messages:
-                # --- Uses new query file ---
                 sender = db.get_user_by_id(msg.get("sender_id"))
                 sender_name = full_name(sender) if sender else "Unknown"
                 text = f"{sender_name}: {msg.get('content')}"
@@ -596,7 +648,6 @@ class HandyConnectApp(tk.Tk):
             content_text = msg_entry.get().strip()
             if not content_text: return
             
-            # --- Uses new query file ---
             db.insert_message({
                 "service_id": service["_id"],
                 "sender_id": self.current_user["_id"],
@@ -629,7 +680,6 @@ class HandyConnectApp(tk.Tk):
             rating = star_selector.get()
             comment = comment_text.get("1.0", tk.END).strip()
 
-            # --- Uses new query file ---
             if db.get_review_by_service_and_customer(service["_id"], self.current_user["_id"]):
                 messagebox.showerror("Review Exists", "You already reviewed this service.")
                 return
@@ -638,7 +688,6 @@ class HandyConnectApp(tk.Tk):
                 messagebox.showerror("Not Allowed", "Only completed services can be reviewed.")
                 return
 
-            # --- Uses new query file ---
             db.insert_review({
                 "customer_id": self.current_user["_id"],
                 "worker_id": service["worker_id"],
@@ -646,10 +695,9 @@ class HandyConnectApp(tk.Tk):
                 "rating": rating,
                 "comment": comment,
                 "review_date": db.now(),
-                "images": [],
+                "images": []
             })
 
-            # --- Uses new query file ---
             db.recalculate_worker_rating(service["worker_id"])
             messagebox.showinfo("Success", "Review submitted.")
             self.show_customer_reviews()
@@ -659,8 +707,6 @@ class HandyConnectApp(tk.Tk):
     def show_reviews_for_worker(self, worker):
         content = self.render_shell("browse")
         make_label(content, f"Reviews for {full_name(worker)}", size=22, bold=True, fg="#4A2E1E").pack(anchor="w")
-        
-        # --- Uses new query file ---
         reviews = db.get_worker_reviews(worker["_id"])
 
         if not reviews:
@@ -671,7 +717,6 @@ class HandyConnectApp(tk.Tk):
             self.review_card(content, review)
 
     def review_card(self, parent, review):
-        # --- Uses new query file ---
         customer = db.get_user_by_id(review.get("customer_id"))
         worker = db.get_user_by_id(review.get("worker_id"))
         service = db.get_service_by_id(review.get("service_id"))
@@ -735,7 +780,6 @@ class HandyConnectApp(tk.Tk):
                     "created_at": db.now(),
                 }]
                 
-            # --- Uses new query file ---
             db.update_user_profile(self.current_user["_id"], update)
             self.current_user = db.get_user_by_id(self.current_user["_id"])
             
