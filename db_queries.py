@@ -114,3 +114,16 @@ def get_service_messages(service_id):
 
 def insert_message(message_data):
     messages_col.insert_one(message_data)
+
+def mark_as_read(service_id, current_user_id):
+    messages_col.update_many(
+        {
+            "service_id": service_id,
+            "sender_id": {"$ne": current_user_id} # This will set the reciever's messages to read
+        },
+        {
+            "$set": {
+                "is_read": True,
+            }
+        }
+    )

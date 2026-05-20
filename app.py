@@ -89,7 +89,7 @@ class StarRating(tk.Frame):
                 lbl.config(text="★")
             else:
                 lbl.config(text="☆")
-                
+
     def get(self):
         return self.rating
 
@@ -102,7 +102,7 @@ class HandyConnectApp(tk.Tk):
         super().__init__()
         self.title("HandyConnect")
         self.geometry("1225x800")
-        self.configure(bg='#E9DFD8')  
+        self.configure(bg='#E9DFD8')
         self.resizable(False, False)
 
         self.current_user = None
@@ -114,7 +114,7 @@ class HandyConnectApp(tk.Tk):
         self.header_user = tk.Label(self.header, text="", bg="#4A2E1E", fg="#E9DFD8", font=("Arial", 11))
         self.header_user.pack(side=tk.RIGHT, padx=25)
 
-        self.body = tk.Frame(self, bg="#E9DFD8")  
+        self.body = tk.Frame(self, bg="#E9DFD8")
         self.body.pack(fill=tk.BOTH, expand=True)
         self.show_login()
 
@@ -126,7 +126,7 @@ class HandyConnectApp(tk.Tk):
 
     def render_shell(self, active_page="home"):
         clear_frame(self.body)
-        self.body.config(bg="#F7F2EF")  
+        self.body.config(bg="#F7F2EF")
         self.header.pack(fill=tk.X, before=self.body)
         self.set_header()
 
@@ -172,7 +172,7 @@ class HandyConnectApp(tk.Tk):
 
     def show_login(self):
         clear_frame(self.body)
-        self.body.config(bg="#E9DFD8")  
+        self.body.config(bg="#E9DFD8")
         self.current_user = None
         self.set_header()
 
@@ -351,7 +351,7 @@ class HandyConnectApp(tk.Tk):
         search_frame.pack(fill=tk.X, pady=10)
         search_var = tk.StringVar()
         tk.Entry(search_frame, textvariable=search_var, font=("Arial", 11)).pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=5)
-        
+
         list_frame = tk.Frame(content, bg="#F7F2EF")
         list_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -389,7 +389,7 @@ class HandyConnectApp(tk.Tk):
         rating = worker.get("avg_rating", 0)
         availability = "Available" if worker.get("availability", True) else "Unavailable"
         star_display = render_stars(rating)
-        
+
         make_label(card, f"Skills: {skills}", bg="white").pack(anchor="w", pady=2)
         make_label(card, f"Rating: {rating} {star_display} | Status: {availability}", bg="white", fg="#F5B041" if rating > 0 else "#222222").pack(anchor="w")
 
@@ -531,7 +531,7 @@ class HandyConnectApp(tk.Tk):
                 "availability": availability_var.get(),
                 "updated_at": db.now(),
             })
-            
+
             self.current_user = db.get_user_by_id(self.current_user["_id"])
             messagebox.showinfo("Success", "Worker listing updated.")
             self.show_worker_listing()
@@ -614,7 +614,7 @@ class HandyConnectApp(tk.Tk):
             card = tk.Frame(content, bg="white", padx=14, pady=12, highlightbackground="#ddd", highlightthickness=1)
             card.pack(fill=tk.X, pady=6)
             make_label(card, f"{service.get('service_title')} | {service.get('status', 'pending')}", size=13, bold=True, bg="white", fg="#4A2E1E").pack(anchor="w")
-            
+
             # Dynamically resolve opposite peer name instead of showing the raw Conversation ID string
             if is_customer:
                 peer_user = db.get_user_by_id(service.get("worker_id"))
@@ -622,13 +622,18 @@ class HandyConnectApp(tk.Tk):
             else:
                 peer_user = db.get_user_by_id(service.get("customer_id"))
                 peer_label_text = f"Customer: {full_name(peer_user) if peer_user else 'Unknown Customer'}"
-                
+
             make_label(card, peer_label_text, bg="white").pack(anchor="w")
             make_button(card, "Open Chat", lambda s=service: self.show_service_chat(s), bg="#C07B4D").pack(anchor="e", pady=(5, 0))
 
     def show_service_chat(self, service):
         content = self.render_shell("messages")
         make_label(content, f"Chat: {service.get('service_title')}", size=22, bold=True, fg="#4A2E1E").pack(anchor="w")
+
+        db.mark_as_read(
+            service['_id'],
+            self.current_user['_id']
+        )
 
         chat_box = tk.Frame(content, bg="white", padx=15, pady=15)
         chat_box.pack(fill=tk.BOTH, expand=True, pady=10)
@@ -657,7 +662,7 @@ class HandyConnectApp(tk.Tk):
         def send():
             content_text = msg_entry.get().strip()
             if not content_text: return
-            
+
             db.insert_message({
                 "service_id": service["_id"],
                 "sender_id": self.current_user["_id"],
@@ -736,7 +741,7 @@ class HandyConnectApp(tk.Tk):
 
         r_val = review.get('rating', 0)
         star_display = render_stars(r_val)
-        
+
         make_label(card, f"Rating: {star_display} ({r_val}/5)", size=14, bold=True, bg="white", fg="#F5B041").pack(anchor="w")
         make_label(card, f"Service: {service.get('service_title') if service else 'Unknown'}", bg="white").pack(anchor="w")
         make_label(card, f"Customer: {full_name(customer) if customer else 'Unknown'}", bg="white").pack(anchor="w")
@@ -789,10 +794,10 @@ class HandyConnectApp(tk.Tk):
                     "state": "", "postal_code": "", "country": "Pakistan",
                     "created_at": db.now(),
                 }]
-                
+
             db.update_user_profile(self.current_user["_id"], update)
             self.current_user = db.get_user_by_id(self.current_user["_id"])
-            
+
             messagebox.showinfo("Success", "Profile updated.")
             self.show_profile()
 
