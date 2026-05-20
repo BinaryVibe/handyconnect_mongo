@@ -1,3 +1,4 @@
+import os
 import hashlib
 from datetime import datetime
 from pymongo import MongoClient
