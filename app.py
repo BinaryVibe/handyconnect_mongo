@@ -102,8 +102,7 @@ class HandyConnectApp(tk.Tk):
         super().__init__()
         self.title("HandyConnect")
         self.geometry("1225x800")
-        self.configure(bg='#E9DFD8')
-        self.resizable(False, False)
+        self.configure(bg='#E9DFD8')  
 
         self.current_user = None
 
