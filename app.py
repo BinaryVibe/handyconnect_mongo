@@ -600,30 +600,168 @@ class HandyConnectApp(tk.Tk):
         make_label(content, "Messages", size=22, bold=True, fg="#4A2E1E").pack(anchor="w")
 
         is_customer = self.current_user.get("role") == "customer"
-        if is_customer:
-            services = db.get_customer_services(self.current_user["_id"])
-        else:
-            services = db.get_worker_services(self.current_user["_id"])
 
-        if not services:
-            make_label(content, "No conversations yet.", size=12).pack(anchor="w", pady=15)
-            return
+        # -----------------------------
+        # Filter/Search State
+        # -----------------------------
+        search_var = tk.StringVar()
+        filter_var = tk.StringVar(value="all")
+        sort_var = tk.StringVar(value="newest")
 
-        for service in services:
-            card = tk.Frame(content, bg="white", padx=14, pady=12, highlightbackground="#ddd", highlightthickness=1)
-            card.pack(fill=tk.X, pady=6)
-            make_label(card, f"{service.get('service_title')} | {service.get('status', 'pending')}", size=13, bold=True, bg="white", fg="#4A2E1E").pack(anchor="w")
+        # -----------------------------
+        # Search + Filters UI
+        # -----------------------------
+        controls_frame = tk.Frame(content, bg="#F7F2EF")
+        controls_frame.pack(fill=tk.X, pady=(10, 15))
 
-            # Dynamically resolve opposite peer name instead of showing the raw Conversation ID string
+        search_entry = tk.Entry(
+            controls_frame,
+            textvariable=search_var,
+            font=("Arial", 11),
+        )
+        search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=6)
+
+        make_button(
+            controls_frame,
+            "Search",
+            lambda: load_services(),
+            bg="#4A2E1E"
+        ).pack(side=tk.LEFT, padx=(8, 0))
+
+        filters_frame = tk.Frame(content, bg="#F7F2EF")
+        filters_frame.pack(fill=tk.X, pady=(0, 10))
+
+        def set_filter(value):
+            filter_var.set(value)
+            load_services()
+
+        def set_sort(value):
+            sort_var.set(value)
+            load_services()
+
+        make_button(filters_frame, "All", lambda: set_filter("all"), bg="#4A2E1E").pack(side=tk.LEFT, padx=3)
+        make_button(filters_frame, "Accepted", lambda: set_filter("accepted_true"), bg="#4A2E1E").pack(side=tk.LEFT, padx=3)
+        make_button(filters_frame, "Not Accepted", lambda: set_filter("accepted_false"), bg="#4A2E1E").pack(side=tk.LEFT, padx=3)
+        make_button(filters_frame, "Completed", lambda: set_filter("status_completed"), bg="#4A2E1E").pack(side=tk.LEFT, padx=3)
+        make_button(filters_frame, "Pending", lambda: set_filter("status_pending"), bg="#4A2E1E").pack(side=tk.LEFT, padx=3)
+
+        sort_frame = tk.Frame(content, bg="#F7F2EF")
+        sort_frame.pack(fill=tk.X, pady=(0, 15))
+
+        make_label(sort_frame, "Sort:", bg="#F7F2EF", fg="#4A2E1E", bold=True).pack(side=tk.LEFT, padx=(0, 6))
+
+        make_button(sort_frame, "Peer Name A-Z", lambda: set_sort("peer_name_asc"), bg="#C07B4D").pack(side=tk.LEFT, padx=3)
+        make_button(sort_frame, "Service Title A-Z", lambda: set_sort("service_title_asc"), bg="#C07B4D").pack(side=tk.LEFT, padx=3)
+        make_button(sort_frame, "Completed Date ↑", lambda: set_sort("completed_date_asc"), bg="#C07B4D").pack(side=tk.LEFT, padx=3)
+        make_button(sort_frame, "Completed Date ↓", lambda: set_sort("completed_date_desc"), bg="#C07B4D").pack(side=tk.LEFT, padx=3)
+
+        services_frame = tk.Frame(content, bg="#F7F2EF")
+        services_frame.pack(fill=tk.BOTH, expand=True)
+
+        # -----------------------------
+        # Service Loader
+        # -----------------------------
+        def load_services():
+            clear_frame(services_frame)
+
+            search_text = search_var.get().strip()
+            filter_type = filter_var.get()
+            sort_type = sort_var.get()
+
             if is_customer:
-                peer_user = db.get_user_by_id(service.get("worker_id"))
-                peer_label_text = f"Worker: {full_name(peer_user) if peer_user else 'Unknown Worker'}"
+                services = db.get_customer_message_services(
+                    customer_id=self.current_user["_id"],
+                    search_text=search_text,
+                    filter_type=filter_type,
+                    sort_type=sort_type,
+                )
             else:
-                peer_user = db.get_user_by_id(service.get("customer_id"))
-                peer_label_text = f"Customer: {full_name(peer_user) if peer_user else 'Unknown Customer'}"
+                services = db.get_worker_message_services(
+                    worker_id=self.current_user["_id"],
+                    search_text=search_text,
+                    filter_type=filter_type,
+                    sort_type=sort_type,
+                )
 
-            make_label(card, peer_label_text, bg="white").pack(anchor="w")
-            make_button(card, "Open Chat", lambda s=service: self.show_service_chat(s), bg="#C07B4D").pack(anchor="e", pady=(5, 0))
+            if not services:
+                make_label(
+                    services_frame,
+                    "No conversations found.",
+                    size=12
+                ).pack(anchor="w", pady=15)
+                return
+
+            for service in services:
+                card = tk.Frame(
+                    services_frame,
+                    bg="white",
+                    padx=14,
+                    pady=12,
+                    highlightbackground="#ddd",
+                    highlightthickness=1
+                )
+                card.pack(fill=tk.X, pady=6)
+
+                make_label(
+                    card,
+                    f"{service.get('service_title')} | {service.get('status', 'pending')}",
+                    size=13,
+                    bold=True,
+                    bg="white",
+                    fg="#4A2E1E"
+                ).pack(anchor="w")
+
+                if is_customer:
+                    peer_user = service.get("worker")
+
+                    if peer_user is None:
+                        peer_user = db.get_user_by_id(service.get("worker_id"))
+
+                    peer_label_text = (
+                        f"Worker: {full_name(peer_user) if peer_user else 'Unknown Worker'}"
+                    )
+                else:
+                    peer_user = service.get("customer")
+
+                    if peer_user is None:
+                        peer_user = db.get_user_by_id(service.get("customer_id"))
+
+                    peer_label_text = (
+                        f"Customer: {full_name(peer_user) if peer_user else 'Unknown Customer'}"
+                    )
+
+                make_label(card, peer_label_text, bg="white").pack(anchor="w")
+
+                make_label(
+                    card,
+                    f"Accepted: {service.get('accepted_status', False)}",
+                    bg="white"
+                ).pack(anchor="w")
+
+                completed_date = service.get("details", {}).get("completed_date")
+
+                if completed_date:
+                    completed_text = f"Completed Date: {completed_date}"
+                else:
+                    completed_text = "Completed Date: Not completed"
+
+                make_label(
+                    card,
+                    completed_text,
+                    bg="white"
+                ).pack(anchor="w")
+
+                make_button(
+                    card,
+                    "Open Chat",
+                    lambda s=service: self.show_service_chat(s),
+                    bg="#C07B4D"
+                ).pack(anchor="e", pady=(5, 0))
+
+        # Reload when pressing Enter in search box
+        search_entry.bind("<Return>", lambda event: load_services())
+
+        load_services()
 
     def show_service_chat(self, service):
         content = self.render_shell("messages")
