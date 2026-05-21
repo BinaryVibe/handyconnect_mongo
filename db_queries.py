@@ -5,9 +5,7 @@ from pymongo import MongoClient
 from dotenv import load_dotenv
 
 load_dotenv()
-# ============================================================
 # Database Configuration
-# ============================================================
 MONGO_URI = os.getenv("ATLAS_URI")
 DATABASE_NAME = "handyconnect"
 
@@ -20,9 +18,7 @@ messages_col = db["messages"]
 reviews_col = db["reviews"]
 
 
-# ============================================================
 # Utilities
-# ============================================================
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
@@ -31,9 +27,7 @@ def now():
     return datetime.now()
 
 
-# ============================================================
 # User Queries
-# ============================================================
 def authenticate_user(email, password):
     return users_col.find_one(
         {
@@ -63,9 +57,7 @@ def update_user_profile(user_id, update_data):
     users_col.update_one({"_id": user_id}, {"$set": update_data})
 
 
-# ============================================================
 # Service Queries
-# ============================================================
 def insert_service(service_data):
     services_col.insert_one(service_data)
 
@@ -93,9 +85,7 @@ def update_service_state(service_id, status):
     services_col.update_one({"_id": service_id}, {"$set": update})
 
 
-# ============================================================
 # Review Queries
-# ============================================================
 def get_review_by_service_and_customer(service_id, customer_id):
     return reviews_col.find_one(
         {
@@ -129,9 +119,7 @@ def recalculate_worker_rating(worker_id):
     )
 
 
-# ============================================================
 # Message Queries
-# ============================================================
 def get_service_messages(service_id):
     return list(messages_col.find({"service_id": service_id}).sort("created_at", 1))
 
@@ -169,7 +157,7 @@ def get_customer_message_services(
                 "as": "worker",
             }
         },
-        {"$unwind": {"path": "$worker", "preserveNullAndEmptyArrays": True}},
+        {"$unwind": "$worker"},
     ]
 
     if search_text.strip():
@@ -262,7 +250,7 @@ def get_worker_message_services(
                 "as": "customer",
             }
         },
-        {"$unwind": {"path": "$customer", "preserveNullAndEmptyArrays": True}},
+        {"$unwind": "$customer"},
     ]
 
     if search_text.strip():
