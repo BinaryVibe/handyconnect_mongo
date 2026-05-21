@@ -59,6 +59,28 @@ def add_placeholder(widget, placeholder):
     widget.bind("<FocusIn>", on_focus_in)
     widget.bind("<FocusOut>", on_focus_out)
 
+def add_entry_placeholder(widget, placeholder, is_password=False):
+    def on_focus_in(event):
+        if widget.get() == placeholder:
+            widget.delete(0, "end")
+            widget.config(fg='black')
+            if is_password:
+                widget.config(show="*")
+
+    def on_focus_out(event):
+        if widget.get().strip() == "":
+            if is_password:
+                widget.config(show="")
+            widget.insert(0, placeholder)
+            widget.config(fg='grey')
+
+    if is_password:
+        widget.config(show="")
+    widget.insert(0, placeholder)
+    widget.config(fg='grey')
+    widget.bind("<FocusIn>", on_focus_in)
+    widget.bind("<FocusOut>", on_focus_out)
+
 def render_stars(rating):
     try:
         r = round(float(rating))
@@ -206,23 +228,36 @@ class HandyConnectApp(tk.Tk):
         email_label = tk.Label(login_frame, text="Email:", fg='#4A2E1E', bg='#E9DFD8', font=('Arial', 12, 'bold'))
         email_label.place(x=10, y=240)
 
-        email_entry = tk.Text(login_frame, width=38, height=1, fg='black', border=0, bg='#E9DFD8', font=('Arial', 12))
+        email_entry = tk.Entry(login_frame, width=34, fg='black', border=0, bg='#E9DFD8', font=('Arial', 12))
         email_entry.place(x=100, y=240)
-        add_placeholder(email_entry, "Enter email")
+        add_entry_placeholder(email_entry, "Enter email")
         tk.Frame(login_frame, width=350, height=2, bg='#4A2E1E').place(x=100, y=260)
 
         # Password Component Section
         password_label = tk.Label(login_frame, text="Password:", fg='#4A2E1E', bg='#E9DFD8', font=('Arial', 12, 'bold'))
         password_label.place(x=10, y=310)
 
-        password_entry = tk.Text(login_frame, width=38, height=1, fg='black', border=0, bg='#E9DFD8', font=('Arial', 12))
+        password_entry = tk.Entry(login_frame, width=34, fg='black', border=0, bg='#E9DFD8', font=('Arial', 12))
         password_entry.place(x=100, y=310)
-        add_placeholder(password_entry, "Enter password")
+        add_entry_placeholder(password_entry, "Enter password", is_password=True)
         tk.Frame(login_frame, width=350, height=2, bg='#4A2E1E').place(x=100, y=330)
 
+        # Toggle Login Password Button
+        def toggle_login_password():
+            if password_entry.get() == "Enter password": return
+            if password_entry.cget('show') == '*':
+                password_entry.config(show='')
+                toggle_btn.config(text='Hide')
+            else:
+                password_entry.config(show='*')
+                toggle_btn.config(text='Show')
+
+        toggle_btn = tk.Button(login_frame, text="Show", bg='#E9DFD8', fg='#C07B4D', font=('Arial', 10, 'bold'), border=0, cursor='hand2', command=toggle_login_password)
+        toggle_btn.place(x=410, y=308)
+
         def do_login():
-            email = email_entry.get("1.0", "end-1c").strip().lower()
-            password = password_entry.get("1.0", "end-1c").strip()
+            email = email_entry.get().strip().lower()
+            password = password_entry.get().strip()
             selected_role = role_var.get().lower()
 
             if selected_role == "select user type":
@@ -274,9 +309,29 @@ class HandyConnectApp(tk.Tk):
         make_label(card, "Create Account", size=22, bold=True, fg="#4A2E1E", bg="white").pack(anchor="center", pady=(0, 12))
         fields = {}
 
-        for label in ["First Name", "Last Name", "Email", "Phone Number", "Password"]:
+        for label in ["First Name", "Last Name", "Email", "Phone Number"]:
             make_label(card, label, bg="white").pack(anchor="w")
-            fields[label] = make_entry(card, show="*" if label == "Password" else None)
+            fields[label] = make_entry(card)
+
+        # Password block with toggle button
+        make_label(card, "Password", bg="white").pack(anchor="w")
+        pwd_frame = tk.Frame(card, bg="white")
+        pwd_frame.pack(fill=tk.X, pady=(2, 10))
+        
+        pwd_entry = tk.Entry(pwd_frame, font=("Arial", 11), show="*")
+        pwd_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=5)
+        fields["Password"] = pwd_entry
+
+        def toggle_reg_password():
+            if pwd_entry.cget('show') == '*':
+                pwd_entry.config(show='')
+                reg_toggle_btn.config(text='Hide')
+            else:
+                pwd_entry.config(show='*')
+                reg_toggle_btn.config(text='Show')
+
+        reg_toggle_btn = tk.Button(pwd_frame, text="Show", bg="#4A2E1E", fg="white", font=("Arial", 9, "bold"), relief=tk.FLAT, cursor="hand2", command=toggle_reg_password, padx=8)
+        reg_toggle_btn.pack(side=tk.RIGHT, padx=(5, 0))
 
         make_label(card, "Role", bg="white").pack(anchor="w")
         role_var = tk.StringVar(value="customer")
